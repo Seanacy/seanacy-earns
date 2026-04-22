@@ -8,7 +8,9 @@ interface AffiliateData {
   name: string;
   email: string;
   referral_code: string;
+  coupon_code: string | null;
   commission_rate: number;
+  discount_percent: number;
   total_earnings: number;
   total_paid: number;
 }
@@ -41,7 +43,6 @@ export default function AffiliatePage() {
     setSuccess("");
 
     try {
-      // Check if affiliate already exists
       const { data: existing } = await supabase
         .from("affiliates")
         .select("*")
@@ -64,6 +65,7 @@ export default function AffiliatePage() {
           email,
           referral_code: referralCode,
           commission_rate: 0.2,
+          discount_percent: 0,
           total_earnings: 0,
           total_paid: 0,
           is_active: true,
@@ -122,8 +124,8 @@ export default function AffiliatePage() {
         Affiliate Program
       </h1>
       <p className="mt-3 text-lg text-muted">
-        Earn <span className="font-bold text-accent">20% commission</span> on
-        every sale you refer. Share your unique link and get paid.
+        Earn commissions on every sale you refer. Share your unique link or
+        coupon code and get paid.
       </p>
 
       {/* Affiliate Dashboard */}
@@ -166,6 +168,25 @@ export default function AffiliatePage() {
             </div>
           </div>
 
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg border border-card-border bg-background p-3 text-center">
+              <div className="text-lg font-bold text-accent">
+                {(affiliate.commission_rate * 100).toFixed(0)}%
+              </div>
+              <div className="text-xs text-muted">Your Commission Rate</div>
+            </div>
+            {affiliate.discount_percent > 0 && (
+              <div className="rounded-lg border border-card-border bg-background p-3 text-center">
+                <div className="text-lg font-bold text-accent">
+                  {affiliate.discount_percent}%
+                </div>
+                <div className="text-xs text-muted">
+                  Discount for Your Customers
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="mt-6">
             <label className="text-sm font-medium text-muted">
               Your Referral Link
@@ -191,6 +212,37 @@ export default function AffiliatePage() {
               </span>
             </p>
           </div>
+
+          {affiliate.coupon_code && (
+            <div className="mt-4">
+              <label className="text-sm font-medium text-muted">
+                Your Coupon Code
+              </label>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={affiliate.coupon_code}
+                  className="w-full rounded-lg border border-card-border bg-background px-4 py-2.5 text-sm font-mono text-accent"
+                />
+                <button
+                  onClick={() =>
+                    navigator.clipboard.writeText(affiliate.coupon_code!)
+                  }
+                  className="shrink-0 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-black hover:bg-accent-hover transition-colors cursor-pointer"
+                >
+                  Copy
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-muted">
+                Customers who use this code get{" "}
+                <span className="text-accent">
+                  {affiliate.discount_percent}% off
+                </span>{" "}
+                and you earn commission on the sale.
+              </p>
+            </div>
+          )}
 
           <button
             onClick={() => {
