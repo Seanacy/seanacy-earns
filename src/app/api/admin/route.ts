@@ -121,6 +121,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ data });
     }
 
+    if (type === "product") {
+      const { data, error } = await supabase
+        .from("products")
+        .insert({
+          name: payload.name,
+          slug: payload.slug,
+          description: payload.description || "",
+          price: payload.price,
+          stripe_price_id: payload.stripe_price_id || null,
+          download_url: payload.download_url || null,
+          is_active: true,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return NextResponse.json({ data });
+    }
+
     if (type === "affiliate_product") {
       const { data, error } = await supabase
         .from("affiliate_products")
@@ -158,6 +176,17 @@ export async function PUT(req: NextRequest) {
     if (type === "affiliate") {
       const { data, error } = await supabase
         .from("affiliates")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return NextResponse.json({ data });
+    }
+
+    if (type === "product") {
+      const { data, error } = await supabase
+        .from("products")
         .update(updates)
         .eq("id", id)
         .select()
