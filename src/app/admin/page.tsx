@@ -57,7 +57,7 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
   const [tab, setTab] = useState<
-    "affiliates" | "coupons" | "assignments" | "referrals"
+    "affiliates" | "coupons" | "products" | "assignments" | "referrals"
   >("affiliates");
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -83,6 +83,14 @@ export default function AdminPage() {
     discount_percent: "10",
     max_uses: "",
     expires_at: "",
+  });
+  const [newProduct, setNewProduct] = useState({
+    name: "",
+    slug: "",
+    description: "",
+    price: "",
+    stripe_price_id: "",
+    download_url: "",
   });
   const [newAssignment, setNewAssignment] = useState({
     affiliate_id: "",
@@ -194,6 +202,52 @@ export default function AdminPage() {
     } else {
       setMsg("Error: " + (data.error || "Unknown"));
     }
+  }
+
+  async function createProduct(e: React.FormEvent) {
+    e.preventDefault();
+    setMsg("");
+    const res = await fetch("/api/admin", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        type: "product",
+        name: newProduct.name,
+        slug: newProduct.slug,
+        description: newProduct.description,
+        price: parseInt(newProduct.price),
+        stripe_price_id: newProduct.stripe_price_id || null,
+        download_url: newProduct.download_url || null,
+      }),
+    });
+    const data = await res.json();
+    if (data.data) {
+      setMsg("Product created!");
+      setNewProduct({
+        name: "",
+        slug: "",
+        description: "",
+        price: "",
+        stripe_price_id: "",
+        download_url: "",
+      });
+      loadData();
+    } else {
+      setMsg("Error: " + (data.error || "Unknown"));
+    }
+  }
+
+  async function toggleProduct(id: string, currentActive: boolean) {
+    await fetch("/api/admin", {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        type: "product",
+        id,
+        is_active: !currentActive,
+      }),
+    });
+    loadData();
   }
 
   async function createAssignment(e: React.FormEvent) {
@@ -336,6 +390,7 @@ export default function AdminPage() {
           [
             ["affiliates", "Affiliates"],
             ["coupons", "Coupons"],
+            ["products", "Products"],
             ["assignments", "Product Assignments"],
             ["referrals", "Referrals"],
           ] as const
@@ -663,6 +718,141 @@ export default function AdminPage() {
             {coupons.length === 0 && (
               <p className="text-sm text-muted text-center py-8">
                 No coupons yet
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* PRODUCTS TAB */}
+      {tab === "products" && (
+        <div className="mt-6 space-y-6">
+          <div className="rounded-xl border border-card-border bg-card-bg p-5">
+            <h2 className="text-lg font-bold">Add Product</h2>
+            <form
+              onSubmit={createProduct}
+              className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              <div>
+                <label className={labelClass}>Product Name</label>
+                <input
+                  value={newProduct.name}
+                  onChange={(e) =>
+                    setNewProduct({ ...newProduct, name: e.target.value })
+                  }
+                  placeholder="Money Mastery Guide"
+                  className={inputClass + " mt-1"}
+                  required
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Slug (URL path)</label>
+                <input
+                  value={newProduct.slug}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
+                    })
+                  }
+                  placeholder="money-mastery-guide"
+                  className={inputClass + " mt-1"}
+                  required
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Price (in cents, e.g. 2999 = $29.99)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={newProduct.price}
+                  onChange={(e) =>
+                    setNewProduct({ ...newProduct, price: e.target.value })
+                  }
+                  placeholder="2999"
+                  className={inputClass + " mt-1"}
+                  required
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Description</label>
+                <input
+                  value={newProduct.description}
+                  onChange={(e) =>
+                    setNewProduct({ ...newProduct, description: e.target.value })
+                  }
+                  placeholder="Short description"
+                  className={inputClass + " mt-1"}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Stripe Price ID (optional)</label>
+                <input
+                  value={newProduct.stripe_price_id}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      stripe_price_id: e.target.value,
+                    })
+                  }
+                  placeholder="price_abc123"
+                  className={inputClass + " mt-1"}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Download URL (optional)</label>
+                <input
+                  value={newProduct.download_url}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      download_url: e.target.value,
+                    })
+                  }
+                  placeholder="https://..."
+                  className={inputClass + " mt-1"}
+                />
+              </div>
+              <div className="sm:col-span-2 lg:col-span-3">
+                <button type="submit" className={btnClass}>
+                  Create Product
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className="space-y-3">
+            {products.map((p) => (
+              <div
+                key={p.id}
+                className={`rounded-xl border bg-card-bg p-4 flex items-center justify-between ${
+                  p.is_active
+                    ? "border-card-border"
+                    : "border-red-500/30 opacity-60"
+                }`}
+              >
+                <div>
+                  <div className="font-bold">{p.name}</div>
+                  <div className="mt-1 flex gap-3 text-xs text-muted">
+                    <span>Slug: <span className="font-mono text-accent">{p.slug}</span></span>
+                    <span>${(p.price / 100).toFixed(2)}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => toggleProduct(p.id, p.is_active)}
+                  className={`rounded-lg px-3 py-1 text-xs font-medium cursor-pointer ${
+                    p.is_active
+                      ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                      : "bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                  }`}
+                >
+                  {p.is_active ? "Deactivate" : "Activate"}
+                </button>
+              </div>
+            ))}
+            {products.length === 0 && (
+              <p className="text-sm text-muted text-center py-8">
+                No products yet
               </p>
             )}
           </div>
