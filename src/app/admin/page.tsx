@@ -31,7 +31,11 @@ interface Product {
   id: string;
   name: string;
   slug: string;
+  description: string;
   price: number;
+  image_url: string | null;
+  stripe_price_id: string | null;
+  download_url: string | null;
   is_active: boolean;
 }
 
@@ -97,6 +101,20 @@ export default function AdminPage() {
     product_id: "",
     custom_commission_rate: "",
   });
+
+  // Edit product state
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    slug: "",
+    description: "",
+    price: "",
+    image_url: "",
+    stripe_price_id: "",
+    download_url: "",
+  });
+  const [uploading, setUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const headers = {
     "Content-Type": "application/json",
@@ -248,6 +266,90 @@ export default function AdminPage() {
       }),
     });
     loadData();
+  }
+
+  function startEditing(p: Product) {
+    setEditingProduct(p);
+    setEditForm({
+      name: p.name,
+      slug: p.slug,
+      description: p.description || "",
+      price: String(p.price),
+      image_url: p.image_url || "",
+      stripe_price_id: p.stripe_price_id || "",
+      download_url: p.download_url || "",
+    });
+    setImagePreview(p.image_url || null);
+  }
+
+  function cancelEditing() {
+    setEditingProduct(null);
+    setImagePreview(null);
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Show preview immediately
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+
+    setUploading(true);
+    setMsg("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        headers: { "x-admin-password": password },
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.url) {
+        setEditForm((prev) => ({ ...prev, image_url: data.url }));
+        setMsg("Image uploaded!");
+      } else {
+        setMsg("Upload failed: " + (data.error || "Unknown error"));
+      }
+    } catch {
+      setMsg("Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function saveProduct(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingProduct) return;
+    setMsg("");
+
+    const res = await fetch("/api/admin", {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        type: "product",
+        id: editingProduct.id,
+        name: editForm.name,
+        slug: editForm.slug,
+        description: editForm.description,
+        price: parseInt(editForm.price),
+        image_url: editForm.image_url || null,
+        stripe_price_id: editForm.stripe_price_id || null,
+        download_url: editForm.download_url || null,
+      }),
+    });
+    const data = await res.json();
+    if (data.data) {
+      setMsg("Product updated!");
+      setEditingProduct(null);
+      setImagePreview(null);
+      loadData();
+    } else {
+      setMsg("Error: " + (data.error || "Unknown"));
+    }
   }
 
   async function createAssignment(e: React.FormEvent) {
@@ -727,127 +829,331 @@ export default function AdminPage() {
       {/* PRODUCTS TAB */}
       {tab === "products" && (
         <div className="mt-6 space-y-6">
-          <div className="rounded-xl border border-card-border bg-card-bg p-5">
-            <h2 className="text-lg font-bold">Add Product</h2>
-            <form
-              onSubmit={createProduct}
-              className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
-            >
-              <div>
-                <label className={labelClass}>Product Name</label>
-                <input
-                  value={newProduct.name}
-                  onChange={(e) =>
-                    setNewProduct({ ...newProduct, name: e.target.value })
-                  }
-                  placeholder="Money Mastery Guide"
-                  className={inputClass + " mt-1"}
-                  required
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Slug (URL path)</label>
-                <input
-                  value={newProduct.slug}
-                  onChange={(e) =>
-                    setNewProduct({
-                      ...newProduct,
-                      slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
-                    })
-                  }
-                  placeholder="money-mastery-guide"
-                  className={inputClass + " mt-1"}
-                  required
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Price (in cents, e.g. 2999 = $29.99)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={newProduct.price}
-                  onChange={(e) =>
-                    setNewProduct({ ...newProduct, price: e.target.value })
-                  }
-                  placeholder="2999"
-                  className={inputClass + " mt-1"}
-                  required
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Description</label>
-                <input
-                  value={newProduct.description}
-                  onChange={(e) =>
-                    setNewProduct({ ...newProduct, description: e.target.value })
-                  }
-                  placeholder="Short description"
-                  className={inputClass + " mt-1"}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Stripe Price ID (optional)</label>
-                <input
-                  value={newProduct.stripe_price_id}
-                  onChange={(e) =>
-                    setNewProduct({
-                      ...newProduct,
-                      stripe_price_id: e.target.value,
-                    })
-                  }
-                  placeholder="price_abc123"
-                  className={inputClass + " mt-1"}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Download URL (optional)</label>
-                <input
-                  value={newProduct.download_url}
-                  onChange={(e) =>
-                    setNewProduct({
-                      ...newProduct,
-                      download_url: e.target.value,
-                    })
-                  }
-                  placeholder="https://..."
-                  className={inputClass + " mt-1"}
-                />
-              </div>
-              <div className="sm:col-span-2 lg:col-span-3">
-                <button type="submit" className={btnClass}>
-                  Create Product
+          {/* Edit Product Form */}
+          {editingProduct && (
+            <div className="rounded-xl border-2 border-accent/50 bg-card-bg p-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold">Edit Product</h2>
+                <button
+                  onClick={cancelEditing}
+                  className="rounded-lg border border-card-border px-3 py-1 text-xs text-muted hover:text-foreground cursor-pointer"
+                >
+                  Cancel
                 </button>
               </div>
-            </form>
-          </div>
+              <form onSubmit={saveProduct} className="mt-4 space-y-4">
+                {/* Image Upload Section */}
+                <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed border-card-border p-6 sm:flex-row">
+                  <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-card-border bg-background">
+                    {imagePreview ? (
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-4xl">ð</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2 text-center sm:text-left">
+                    <label className="text-sm font-medium">Product Image</label>
+                    <p className="text-xs text-muted">
+                      Upload a JPG, PNG, or WebP. This shows on the product page.
+                    </p>
+                    <label
+                      className={`${btnClass} inline-block w-fit text-center ${
+                        uploading ? "opacity-50 pointer-events-none" : ""
+                      }`}
+                    >
+                      {uploading ? "Uploading..." : "Choose Image"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                        disabled={uploading}
+                      />
+                    </label>
+                    {editForm.image_url && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditForm((prev) => ({ ...prev, image_url: "" }));
+                          setImagePreview(null);
+                        }}
+                        className="text-xs text-red-400 hover:text-red-300 cursor-pointer"
+                      >
+                        Remove image
+                      </button>
+                    )}
+                  </div>
+                </div>
 
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div>
+                    <label className={labelClass}>Product Name</label>
+                    <input
+                      value={editForm.name}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, name: e.target.value })
+                      }
+                      className={inputClass + " mt-1"}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Slug (URL path)</label>
+                    <input
+                      value={editForm.slug}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          slug: e.target.value
+                            .toLowerCase()
+                            .replace(/[^a-z0-9-]/g, "-"),
+                        })
+                      }
+                      className={inputClass + " mt-1"}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>
+                      Price (in cents, e.g. 2999 = $29.99)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editForm.price}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, price: e.target.value })
+                      }
+                      className={inputClass + " mt-1"}
+                      required
+                    />
+                  </div>
+                  <div className="sm:col-span-2 lg:col-span-3">
+                    <label className={labelClass}>Description</label>
+                    <textarea
+                      value={editForm.description}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          description: e.target.value,
+                        })
+                      }
+                      rows={3}
+                      className={inputClass + " mt-1"}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>
+                      Stripe Price ID (optional)
+                    </label>
+                    <input
+                      value={editForm.stripe_price_id}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          stripe_price_id: e.target.value,
+                        })
+                      }
+                      className={inputClass + " mt-1"}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className={labelClass}>Download URL (optional)</label>
+                    <input
+                      value={editForm.download_url}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          download_url: e.target.value,
+                        })
+                      }
+                      className={inputClass + " mt-1"}
+                    />
+                  </div>
+                </div>
+
+                <button type="submit" className={btnClass + " w-full py-3"}>
+                  Save Changes
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Create Product Form */}
+          {!editingProduct && (
+            <div className="rounded-xl border border-card-border bg-card-bg p-5">
+              <h2 className="text-lg font-bold">Add Product</h2>
+              <form
+                onSubmit={createProduct}
+                className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+              >
+                <div>
+                  <label className={labelClass}>Product Name</label>
+                  <input
+                    value={newProduct.name}
+                    onChange={(e) =>
+                      setNewProduct({ ...newProduct, name: e.target.value })
+                    }
+                    placeholder="Money Mastery Guide"
+                    className={inputClass + " mt-1"}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Slug (URL path)</label>
+                  <input
+                    value={newProduct.slug}
+                    onChange={(e) =>
+                      setNewProduct({
+                        ...newProduct,
+                        slug: e.target.value
+                          .toLowerCase()
+                          .replace(/[^a-z0-9-]/g, "-"),
+                      })
+                    }
+                    placeholder="money-mastery-guide"
+                    className={inputClass + " mt-1"}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>
+                    Price (in cents, e.g. 2999 = $29.99)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={newProduct.price}
+                    onChange={(e) =>
+                      setNewProduct({ ...newProduct, price: e.target.value })
+                    }
+                    placeholder="2999"
+                    className={inputClass + " mt-1"}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Description</label>
+                  <input
+                    value={newProduct.description}
+                    onChange={(e) =>
+                      setNewProduct({
+                        ...newProduct,
+                        description: e.target.value,
+                      })
+                    }
+                    placeholder="Short description"
+                    className={inputClass + " mt-1"}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>
+                    Stripe Price ID (optional)
+                  </label>
+                  <input
+                    value={newProduct.stripe_price_id}
+                    onChange={(e) =>
+                      setNewProduct({
+                        ...newProduct,
+                        stripe_price_id: e.target.value,
+                      })
+                    }
+                    placeholder="price_abc123"
+                    className={inputClass + " mt-1"}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Download URL (optional)</label>
+                  <input
+                    value={newProduct.download_url}
+                    onChange={(e) =>
+                      setNewProduct({
+                        ...newProduct,
+                        download_url: e.target.value,
+                      })
+                    }
+                    placeholder="https://..."
+                    className={inputClass + " mt-1"}
+                  />
+                </div>
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <button type="submit" className={btnClass}>
+                    Create Product
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Product List */}
           <div className="space-y-3">
             {products.map((p) => (
               <div
                 key={p.id}
-                className={`rounded-xl border bg-card-bg p-4 flex items-center justify-between ${
+                className={`rounded-xl border bg-card-bg p-4 ${
                   p.is_active
                     ? "border-card-border"
                     : "border-red-500/30 opacity-60"
                 }`}
               >
-                <div>
-                  <div className="font-bold">{p.name}</div>
-                  <div className="mt-1 flex gap-3 text-xs text-muted">
-                    <span>Slug: <span className="font-mono text-accent">{p.slug}</span></span>
-                    <span>${(p.price / 100).toFixed(2)}</span>
+                <div className="flex items-center gap-4">
+                  {/* Thumbnail */}
+                  <div className="hidden h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-card-border bg-background sm:flex">
+                    {p.image_url ? (
+                      <img
+                        src={p.image_url}
+                        alt={p.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-2xl">ð</span>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold">{p.name}</div>
+                    {p.description && (
+                      <div className="mt-0.5 text-xs text-muted truncate">
+                        {p.description}
+                      </div>
+                    )}
+                    <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted">
+                      <span>
+                        Slug:{" "}
+                        <span className="font-mono text-accent">{p.slug}</span>
+                      </span>
+                      <span>${(p.price / 100).toFixed(2)}</span>
+                      {p.image_url && (
+                        <span className="text-green-400">Has image</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      onClick={() => startEditing(p)}
+                      className="rounded-lg bg-accent/10 px-3 py-1 text-xs font-medium text-accent hover:bg-accent/20 cursor-pointer"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => toggleProduct(p.id, p.is_active)}
+                      className={`rounded-lg px-3 py-1 text-xs font-medium cursor-pointer ${
+                        p.is_active
+                          ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                          : "bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                      }`}
+                    >
+                      {p.is_active ? "Deactivate" : "Activate"}
+                    </button>
                   </div>
                 </div>
-                <button
-                  onClick={() => toggleProduct(p.id, p.is_active)}
-                  className={`rounded-lg px-3 py-1 text-xs font-medium cursor-pointer ${
-                    p.is_active
-                      ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                      : "bg-green-500/10 text-green-400 hover:bg-green-500/20"
-                  }`}
-                >
-                  {p.is_active ? "Deactivate" : "Activate"}
-                </button>
               </div>
             ))}
             {products.length === 0 && (
