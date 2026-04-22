@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const productId = session.metadata?.product_id;
   const referralCode = session.metadata?.referral_code;
+  const couponCode = session.metadata?.coupon_code;
   const customerEmail = session.customer_details?.email;
   const amount = session.amount_total ?? 0;
 
@@ -98,12 +99,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return;
   }
 
-  // Handle affiliate referral
-  if (referralCode && order) {
+  // Handle affiliate referral - via referral link OR coupon code
+  const affiliateLookupCode = referralCode;
+
+  if (affiliateLookupCode && order) {
     const { data: affiliate } = await supabase
       .from("affiliates")
       .select("id, commission_rate, total_earnings")
-      .eq("referral_code", referralCode)
+      .eq("referral_code", affiliateLookupCode)
       .eq("is_active", true)
       .single();
 
@@ -111,7 +114,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       const commissionRate = affiliate.commission_rate ?? 0.2;
       const commissionAmount = Math.round(amount * commissionRate);
 
-      // Create affiliate referral record
       await supabase.from("affiliate_referrals").insert({
         affiliate_id: affiliate.id,
         order_id: order.id,
@@ -119,7 +121,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         status: "pending",
       });
 
-      // Update affiliate total earnings
       await supabase
         .from("affiliates")
         .update({
@@ -127,5 +128,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         })
         .eq("id", affiliate.id);
     }
+  }
+
+  // If a standalone coupon was used (not affiliate), just log it
+  if (couponCode && !referralCode) {
+    console.log(`Standalone coupon "${couponCode}" used for order ${order?.id}`);
   }
 }
