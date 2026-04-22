@@ -6,6 +6,24 @@ export const metadata: Metadata = {
   title: "Seanacy Earns | Business & Money Ebooks",
   description:
     "Premium digital guides to help you build wealth, grow your business, and master money management.",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
+  openGraph: {
+    title: "Seanacy Earns | Business & Money Ebooks",
+    description:
+      "Premium digital guides to help you build wealth, grow your business, and master money management.",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Seanacy Earns | Business & Money Ebooks",
+    description:
+      "Premium digital guides to help you build wealth, grow your business, and master money management.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({
@@ -14,16 +32,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className="h-full antialiased"
-    >
+    <html lang="en" className="h-full antialiased">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <nav className="sticky top-0 z-50 border-b border-card-border bg-background/80 backdrop-blur-md">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-            <Link href="/" className="flex items-center gap-2 group">
-              <span className="text-2xl font-bold tracking-tight">
-                <span className="text-accent">$</span> Seanacy Earns
+            <Link href="/" className="flex items-center gap-1 group">
+              <span
+                className="text-3xl sm:text-4xl"
+                style={{ fontFamily: "'Great Vibes', cursive" }}
+              >
+                <span className="text-foreground">Seanacy</span>
+                <span className="text-accent">Earns</span>
               </span>
             </Link>
 
