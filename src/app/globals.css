@@ -3,8 +3,8 @@
 :root {
   --background: #0a0a0a;
   --foreground: #ededed;
-  --accent: #10B981;
-  --accent-hover: #059669;
+  --accent: #E88B9E;
+  --accent-hover: #D4758A;
   --card-bg: #111111;
   --card-border: #1f1f1f;
   --muted: #888888;
@@ -33,7 +33,7 @@ body {
 }
 
 ::selection {
-  background: rgba(16, 185, 129, 0.3);
+  background: rgba(232, 139, 158, 0.3);
   color: #fff;
 }
 
