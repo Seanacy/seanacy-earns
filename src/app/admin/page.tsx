@@ -324,31 +324,55 @@ export default function AdminPage() {
   async function saveProduct(e: React.FormEvent) {
     e.preventDefault();
     if (!editingProduct) return;
-    setMsg("");
+    try {
+      let imageUrl = editForm.image_url;
 
-    const res = await fetch("/api/admin", {
-      method: "PUT",
-      headers,
-      body: JSON.stringify({
-        type: "product",
-        id: editingProduct.id,
-        name: editForm.name,
-        slug: editForm.slug,
-        description: editForm.description,
-        price: parseInt(editForm.price),
-        image_url: editForm.image_url || null,
-        stripe_price_id: editForm.stripe_price_id || null,
-        download_url: editForm.download_url || null,
-      }),
-    });
-    const data = await res.json();
-    if (data.data) {
-      setMsg("Product updated!");
+      // Upload new image if one was selected
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append("file", imageFile);
+        const uploadRes = await fetch("/api/admin/upload", {
+          method: "POST",
+          headers: { "x-admin-password": password },
+          body: formData,
+        });
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json();
+          setMsg("Image upload failed: " + (err.error || "Unknown error"));
+          return;
+        }
+        const uploadData = await uploadRes.json();
+        imageUrl = uploadData.url;
+      }
+
+      const res = await fetch("/api/admin", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": password,
+        },
+        body: JSON.stringify({
+          type: "product",
+          id: editingProduct.id,
+          name: editForm.name,
+          description: editForm.description,
+          price: editForm.price,
+          image_url: imageUrl,
+          download_url: editForm.download_url,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setMsg("Save failed: " + (err.error || "Unknown error"));
+        return;
+      }
+      setMsg("Product saved!");
       setEditingProduct(null);
+      setImageFile(null);
       setImagePreview(null);
       loadData();
-    } else {
-      setMsg("Error: " + (data.error || "Unknown"));
+    } catch (err) {
+      setMsg("Error saving: " + (err instanceof Error ? err.message : "Unknown error"));
     }
   }
 
