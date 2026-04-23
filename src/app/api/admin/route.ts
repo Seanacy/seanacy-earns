@@ -138,6 +138,18 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ data });
     }
 
+
+    if (type === "affiliate") {
+      const { data, error } = await supabase
+        .from("affiliates")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return NextResponse.json({ data });
+    }
+
     return NextResponse.json({ error: "Invalid type" }, { status: 400 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
