@@ -115,6 +115,15 @@ export default function AdminPage() {
   });
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [editingAffiliate, setEditingAffiliate] = useState<Affiliate | null>(null);
+  const [affiliateEditForm, setAffiliateEditForm] = useState({
+    name: "",
+    email: "",
+    referral_code: "",
+    coupon_code: "",
+    commission_rate: 0.2,
+    discount_percent: 10,
+  });
 
   const headers = {
     "Content-Type": "application/json",
@@ -355,6 +364,40 @@ export default function AdminPage() {
     }
   }
 
+  async function saveAffiliate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingAffiliate) return;
+    try {
+      const res = await fetch("/api/admin", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": password,
+        },
+        body: JSON.stringify({
+          type: "affiliate",
+          id: editingAffiliate.id,
+          name: affiliateEditForm.name,
+          email: affiliateEditForm.email,
+          referral_code: affiliateEditForm.referral_code,
+          coupon_code: affiliateEditForm.coupon_code,
+          commission_rate: affiliateEditForm.commission_rate,
+          discount_percent: affiliateEditForm.discount_percent,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setMsg("Save failed: " + (err.error || "Unknown error"));
+        return;
+      }
+      setMsg("Affiliate updated!");
+      setEditingAffiliate(null);
+      loadData();
+    } catch (err) {
+      setMsg("Error saving: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
+  }
+
   async function createAssignment(e: React.FormEvent) {
     e.preventDefault();
     setMsg("");
@@ -518,6 +561,46 @@ export default function AdminPage() {
       {tab === "affiliates" && (
         <div className="mt-6 space-y-6">
           {/* Create Form */}
+        {editingAffiliate && (
+          <div className="bg-gray-900 rounded-lg p-6 mb-8 border border-pink-300">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Edit Affiliate</h3>
+              <button onClick={() => setEditingAffiliate(null)} className="text-gray-400 hover:text-white">Cancel</button>
+            </div>
+            <form onSubmit={saveAffiliate}>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm mb-1">Name</label>
+                  <input className="w-full p-2 rounded bg-gray-800 border border-gray-700" value={affiliateEditForm.name} onChange={e => setAffiliateEditForm({...affiliateEditForm, name: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Email</label>
+                  <input className="w-full p-2 rounded bg-gray-800 border border-gray-700" value={affiliateEditForm.email} onChange={e => setAffiliateEditForm({...affiliateEditForm, email: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Referral Code</label>
+                  <input className="w-full p-2 rounded bg-gray-800 border border-gray-700" value={affiliateEditForm.referral_code} onChange={e => setAffiliateEditForm({...affiliateEditForm, referral_code: e.target.value})} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm mb-1">Coupon Code</label>
+                  <input className="w-full p-2 rounded bg-gray-800 border border-gray-700" value={affiliateEditForm.coupon_code || ""} onChange={e => setAffiliateEditForm({...affiliateEditForm, coupon_code: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Commission Rate (0.20 = 20%)</label>
+                  <input type="number" step="0.01" className="w-full p-2 rounded bg-gray-800 border border-gray-700" value={affiliateEditForm.commission_rate} onChange={e => setAffiliateEditForm({...affiliateEditForm, commission_rate: parseFloat(e.target.value)})} />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Discount % for Customers</label>
+                  <input type="number" className="w-full p-2 rounded bg-gray-800 border border-gray-700" value={affiliateEditForm.discount_percent} onChange={e => setAffiliateEditForm({...affiliateEditForm, discount_percent: parseInt(e.target.value)})} />
+                </div>
+              </div>
+              <button type="submit" className="bg-pink-300 text-black px-6 py-3 rounded-lg font-semibold w-full hover:bg-pink-400">Save Changes</button>
+            </form>
+          </div>
+        )}
+
           <div className="rounded-xl border border-card-border bg-card-bg p-5">
             <h2 className="text-lg font-bold">Add Affiliate</h2>
             <form
@@ -683,6 +766,22 @@ export default function AdminPage() {
                       <option value="0.40">40%</option>
                       <option value="0.50">50%</option>
                     </select>
+                  <button
+                    onClick={() => {
+                      setEditingAffiliate(a);
+                      setAffiliateEditForm({
+                        name: a.name,
+                        email: a.email,
+                        referral_code: a.referral_code,
+                        coupon_code: a.coupon_code || "",
+                        commission_rate: a.commission_rate,
+                        discount_percent: a.discount_percent,
+                      });
+                    }}
+                    className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                  >
+                    Edit
+                  </button>
                     <button
                       onClick={() => toggleAffiliate(a.id, a.is_active)}
                       className={`rounded-lg px-3 py-1 text-xs font-medium cursor-pointer ${
@@ -855,7 +954,7 @@ export default function AdminPage() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <span className="text-4xl">Ã°ÂÂÂ</span>
+                      <span className="text-4xl">ÃÂ°ÃÂÃÂÃÂ</span>
                     )}
                   </div>
                   <div className="flex flex-col gap-2 text-center sm:text-left">
@@ -1113,7 +1212,7 @@ export default function AdminPage() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <span className="text-2xl">Ã°ÂÂÂ</span>
+                      <span className="text-2xl">ÃÂ°ÃÂÃÂÃÂ</span>
                     )}
                   </div>
 
