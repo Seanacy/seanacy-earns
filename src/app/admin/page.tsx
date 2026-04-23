@@ -794,7 +794,6 @@ export default function AdminPage() {
                     </button>
                   </div>
                 </div>
-              </div>
                 <div className="mt-2 flex items-center gap-2">
                   <span className="text-xs text-gray-400">Link:</span>
                   <code className="text-xs bg-gray-800 px-2 py-1 rounded text-pink-300 break-all">
