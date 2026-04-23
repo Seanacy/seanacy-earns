@@ -795,28 +795,29 @@ export default function AdminPage() {
                   </div>
                 </div>
               </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs text-gray-400">Link:</span>
+                  <code className="text-xs bg-gray-800 px-2 py-1 rounded text-pink-300 break-all">
+                    {typeof window !== "undefined" ? window.location.origin : ""}/ref/{a.referral_code}
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        window.location.origin + "/ref/" + a.referral_code
+                      );
+                      setMsg("Link copied!");
+                    }}
+                    className="text-xs bg-gray-700 px-2 py-1 rounded hover:bg-gray-600 text-white"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
             ))}
             {affiliates.length === 0 && (
               <p className="text-sm text-muted text-center py-8">
                 No affiliates yet
               </p>
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-xs text-gray-400">Link:</span>
-                <code className="text-xs bg-gray-800 px-2 py-1 rounded text-pink-300 break-all">
-                  {window.location.origin}/ref/{a.referral_code}
-                </code>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      window.location.origin + "/ref/" + a.referral_code
-                    );
-                    setMsg("Link copied!");
-                  }}
-                  className="text-xs bg-gray-700 px-2 py-1 rounded hover:bg-gray-600 text-white"
-                >
-                  Copy
-                </button>
-              </div>
             )}
           </div>
         </div>
