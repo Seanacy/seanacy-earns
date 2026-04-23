@@ -325,26 +325,6 @@ export default function AdminPage() {
     e.preventDefault();
     if (!editingProduct) return;
     try {
-      let imageUrl = editForm.image_url;
-
-      // Upload new image if one was selected
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append("file", imageFile);
-        const uploadRes = await fetch("/api/admin/upload", {
-          method: "POST",
-          headers: { "x-admin-password": password },
-          body: formData,
-        });
-        if (!uploadRes.ok) {
-          const err = await uploadRes.json();
-          setMsg("Image upload failed: " + (err.error || "Unknown error"));
-          return;
-        }
-        const uploadData = await uploadRes.json();
-        imageUrl = uploadData.url;
-      }
-
       const res = await fetch("/api/admin", {
         method: "PUT",
         headers: {
@@ -357,7 +337,7 @@ export default function AdminPage() {
           name: editForm.name,
           description: editForm.description,
           price: editForm.price,
-          image_url: imageUrl,
+          image_url: editForm.image_url,
           download_url: editForm.download_url,
         }),
       });
@@ -368,7 +348,6 @@ export default function AdminPage() {
       }
       setMsg("Product saved!");
       setEditingProduct(null);
-      setImageFile(null);
       setImagePreview(null);
       loadData();
     } catch (err) {
@@ -876,7 +855,7 @@ export default function AdminPage() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <span className="text-4xl">ð</span>
+                      <span className="text-4xl">Ã°ÂÂÂ</span>
                     )}
                   </div>
                   <div className="flex flex-col gap-2 text-center sm:text-left">
@@ -1134,7 +1113,7 @@ export default function AdminPage() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <span className="text-2xl">ð</span>
+                      <span className="text-2xl">Ã°ÂÂÂ</span>
                     )}
                   </div>
 
